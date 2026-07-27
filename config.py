@@ -10,13 +10,13 @@ PWD = os.getenv("PWD")
 DRIVER = os.getenv("DRIVER", "ODBC Driver 18 for SQL Server")
 
 DATABASE_CONNECTION = (
-    f"DRIVER={{{DRIVER}}};"
-    f"SERVER={SERVER};"
-    f"DATABASE={DATABASE};"
-    f"UID={UID};"
-    f"PWD={PWD};"
+    f"Driver={{{DRIVER}}};"
+    f"Server=tcp:{SERVER},1433;"
+    f"Database={DATABASE};"
+    f"Uid={UID};"
+    f"Pwd={PWD};"
     "Encrypt=yes;"
-    "TrustServerCertificate=yes;"
+    "TrustServerCertificate=no;"
     "Connection Timeout=30;"
 )
 
