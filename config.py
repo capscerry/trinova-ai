@@ -19,3 +19,9 @@ DATABASE_CONNECTION = (
     "TrustServerCertificate=yes;"
     "Connection Timeout=30;"
 )
+
+print("=== DATABASE CONFIG ===")
+print(f"SERVER={SERVER}")
+print(f"DATABASE={DATABASE}")
+print(f"UID={UID}")
+print(DATABASE_CONNECTION.replace(PWD, "********"))
