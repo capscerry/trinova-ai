@@ -21,16 +21,6 @@ logger = logging.getLogger(__name__)
 # Startup validation — runs before anything else imports DATABASE_CONNECTION
 # ---------------------------------------------------------------------------
 def _startup_check() -> None:
-    """
-    Print a safe environment diagnostic and raise a clear error if the
-    required database configuration is completely absent.
-
-    Rules enforced here:
-    - Password is NEVER printed or logged
-    - Only existence (True/False) is reported for the raw connection string
-    - Missing variables surface a human-readable error that names exactly
-      what is absent, so the operator knows what to inject
-    """
     has_conn_string = bool(os.getenv("SQL_CONNECTION_STRING_DEV", "").strip())
     has_discrete    = all([
         os.getenv("DB_SERVER", "").strip(),
