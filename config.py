@@ -1,27 +1,24 @@
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
 load_dotenv()
 
-SERVER = os.getenv("SERVER")
-DATABASE = os.getenv("DATABASE")
-UID = os.getenv("UID")
-PWD = os.getenv("PWD")
-DRIVER = os.getenv("DRIVER", "ODBC Driver 18 for SQL Server")
+connection_string = os.getenv("SQL_CONNECTION_STRING_DEV")
 
-DATABASE_CONNECTION = (
-    f"Driver={{{DRIVER}}};"
-    f"Server=tcp:{SERVER},1433;"
-    f"Database={DATABASE};"
-    f"Uid={UID};"
-    f"Pwd={PWD};"
-    "Encrypt=yes;"
-    "TrustServerCertificate=no;"
-    "Connection Timeout=30;"
-)
+if connection_string:
+    DATABASE_CONNECTION = connection_string
+else:
+    SERVER = os.getenv("SERVER")
+    DATABASE = os.getenv("DATABASE")
+    UID = os.getenv("UID")
+    PWD = os.getenv("PWD")
+    DRIVER = os.getenv("DRIVER")
 
-print("=== DATABASE CONFIG ===")
-print(f"SERVER={SERVER}")
-print(f"DATABASE={DATABASE}")
-print(f"UID={UID}")
-print(DATABASE_CONNECTION.replace(PWD, "********"))
+    DATABASE_CONNECTION = (
+        f"DRIVER={{{DRIVER}}};"
+        f"SERVER={SERVER};"
+        f"DATABASE={DATABASE};"
+        f"UID={UID};"
+        f"PWD={PWD};"
+        "TrustServerCertificate=yes;"
+    )
