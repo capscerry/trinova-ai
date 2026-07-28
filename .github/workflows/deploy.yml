@@ -1,0 +1,121 @@
+# =============================================================================
+# Trinova AI — Build, Push, Deploy to Azure Container Apps
+# =============================================================================
+#
+# Required GitHub repository secrets (Settings → Secrets → Actions):
+#
+#   AZURE_CREDENTIALS              — JSON output of:
+#                                    az ad sp create-for-rbac --sdk-auth
+#   AZURE_REGISTRY_LOGIN_SERVER    — e.g. trinovaregistry.azurecr.io
+#   AZURE_REGISTRY_USERNAME        — ACR admin username (or service principal)
+#   AZURE_REGISTRY_PASSWORD        — ACR admin password (or SP secret)
+#   SQL_CONNECTION_STRING_DEV      — Full ADO.NET connection string (see .env.example)
+#
+# Required GitHub repository variables (Settings → Variables → Actions):
+#
+#   AZURE_RESOURCE_GROUP           — e.g. trinova-rg
+#   AZURE_CONTAINER_APP_NAME       — e.g. trinova-ai
+#   AZURE_CONTAINER_APP_ENV        — e.g. trinova-env
+#
+# =============================================================================
+
+name: Build and Deploy to Azure Container Apps
+
+on:
+  push:
+    branches:
+      - main          # deploy on every push to main
+  workflow_dispatch:  # allow manual trigger from GitHub UI
+
+env:
+  IMAGE_NAME: trinova-ai
+
+jobs:
+  build-and-deploy:
+    name: Build image and deploy to Azure
+    runs-on: ubuntu-latest
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout source
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Authenticate to Azure
+      # -----------------------------------------------------------------------
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # -----------------------------------------------------------------------
+      # 3. Log in to Azure Container Registry
+      # -----------------------------------------------------------------------
+      - name: Log in to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}
+          username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+
+      # -----------------------------------------------------------------------
+      # 4. Build and push the Docker image
+      #    Note: secrets are NOT passed as build args — they are injected at
+      #    runtime via Container App environment variables (step 6).
+      # -----------------------------------------------------------------------
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+
+      # -----------------------------------------------------------------------
+      # 5. Set SQL connection string as a Container App secret
+      #    This stores the value in Azure Key Vault-backed secret storage
+      #    inside the Container App — it is never exposed in plain-text logs.
+      # -----------------------------------------------------------------------
+      - name: Set database secret on Container App
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az containerapp secret set \
+              --name        "${{ vars.AZURE_CONTAINER_APP_NAME }}" \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --secrets     "sql-connection-string=${{ secrets.SQL_CONNECTION_STRING_DEV }}"
+
+      # -----------------------------------------------------------------------
+      # 6. Deploy new image revision and inject env var from the secret
+      #    --set-env-vars maps the secret to the env var name the app expects.
+      #    secretref: syntax means the value comes from the Container App
+      #    secret store — not hardcoded in the environment variable.
+      # -----------------------------------------------------------------------
+      - name: Deploy to Azure Container App
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az containerapp update \
+              --name           "${{ vars.AZURE_CONTAINER_APP_NAME }}" \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --image          "${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" \
+              --set-env-vars   "SQL_CONNECTION_STRING_DEV=secretref:sql-connection-string"
+
+      # -----------------------------------------------------------------------
+      # 7. Verify the deployment is healthy
+      # -----------------------------------------------------------------------
+      - name: Verify Container App revision is running
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az containerapp revision list \
+              --name           "${{ vars.AZURE_CONTAINER_APP_NAME }}" \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --query          "[0].{name:name, state:properties.runningState, active:properties.active}" \
+              --output         table
