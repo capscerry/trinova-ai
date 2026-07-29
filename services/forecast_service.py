@@ -1,4 +1,4 @@
-from database import load_forecast_dataset, get_connection
+from client.inventory_client import load_forecast_dataset
 from models.linear_regression import ForecastModel
 import pandas as pd
 from datetime import datetime

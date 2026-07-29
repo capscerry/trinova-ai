@@ -19,32 +19,26 @@ services:
     # ------------------------------------------------------------------
     # Runtime environment injection
     # ------------------------------------------------------------------
-    # env_file loads every KEY=VALUE from .env into the container process.
-    # The explicit "environment" block below maps individual vars as a
-    # fallback — useful when running with --env-file on the CLI instead.
-    # ------------------------------------------------------------------
     env_file:
       - .env                          # must exist locally (copied from .env.example)
 
     environment:
-      # Forward discrete vars if set directly in the shell.
-      # These take priority over SQL_CONNECTION_STRING_DEV in config.py.
-      - DB_SERVER=${DB_SERVER:-}
-      - DB_NAME=${DB_NAME:-}
-      - DB_UID=${DB_UID:-}
-      - DB_PWD=${DB_PWD:-}
-      # Fallback single connection string (config.py parses this safely)
-      - SQL_CONNECTION_STRING_DEV=${SQL_CONNECTION_STRING_DEV:-}
+      # Backend API — required
+      - INVENTORY_API_BASE_URL=${INVENTORY_API_BASE_URL:-}
+      # Auth — optional
+      - API_KEY=${API_KEY:-}
+      # HTTP client tuning — optional
+      - REQUEST_TIMEOUT=${REQUEST_TIMEOUT:-30}
+      - MAX_RETRIES=${MAX_RETRIES:-3}
+      - RETRY_BACKOFF=${RETRY_BACKOFF:-1.0}
       # App config
       - PORT=8080
 
     ports:
       - "8080:8080"
 
-    # Restart the container automatically unless stopped manually
     restart: unless-stopped
 
-    # Health check — confirms the API is accepting connections
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/"]
       interval: 30s

@@ -9,7 +9,8 @@
 #   AZURE_REGISTRY_LOGIN_SERVER    — e.g. trinovaregistry.azurecr.io
 #   AZURE_REGISTRY_USERNAME        — ACR admin username (or service principal)
 #   AZURE_REGISTRY_PASSWORD        — ACR admin password (or SP secret)
-#   SQL_CONNECTION_STRING_DEV      — Full ADO.NET connection string (see .env.example)
+#   INVENTORY_API_BASE_URL         — e.g. https://trinova-backend.azurewebsites.net/api
+#   API_KEY                        — bearer token for the backend (if required)
 #
 # Required GitHub repository variables (Settings → Variables → Actions):
 #
@@ -62,8 +63,7 @@ jobs:
 
       # -----------------------------------------------------------------------
       # 4. Build and push the Docker image
-      #    Note: secrets are NOT passed as build args — they are injected at
-      #    runtime via Container App environment variables (step 6).
+      #    Secrets are NOT baked into the image — injected at runtime (step 6).
       # -----------------------------------------------------------------------
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -75,25 +75,22 @@ jobs:
             ${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
 
       # -----------------------------------------------------------------------
-      # 5. Set SQL connection string as a Container App secret
-      #    This stores the value in Azure Key Vault-backed secret storage
-      #    inside the Container App — it is never exposed in plain-text logs.
+      # 5. Store backend credentials as Container App secrets
+      #    Values are held in Azure's secret store — never in plain-text logs.
       # -----------------------------------------------------------------------
-      - name: Set database secret on Container App
+      - name: Set backend secrets on Container App
         uses: azure/cli@v2
         with:
           azcliversion: latest
           inlineScript: |
             az containerapp secret set \
-              --name        "${{ vars.AZURE_CONTAINER_APP_NAME }}" \
+              --name           "${{ vars.AZURE_CONTAINER_APP_NAME }}" \
               --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-              --secrets     "sql-connection-string=${{ secrets.SQL_CONNECTION_STRING_DEV }}"
+              --secrets        "inventory-api-base-url=${{ secrets.INVENTORY_API_BASE_URL }}" \
+                               "api-key=${{ secrets.API_KEY }}"
 
       # -----------------------------------------------------------------------
-      # 6. Deploy new image revision and inject env var from the secret
-      #    --set-env-vars maps the secret to the env var name the app expects.
-      #    secretref: syntax means the value comes from the Container App
-      #    secret store — not hardcoded in the environment variable.
+      # 6. Deploy new image revision and inject env vars from secrets
       # -----------------------------------------------------------------------
       - name: Deploy to Azure Container App
         uses: azure/cli@v2
@@ -104,7 +101,8 @@ jobs:
               --name           "${{ vars.AZURE_CONTAINER_APP_NAME }}" \
               --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
               --image          "${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" \
-              --set-env-vars   "SQL_CONNECTION_STRING_DEV=secretref:sql-connection-string"
+              --set-env-vars   "INVENTORY_API_BASE_URL=secretref:inventory-api-base-url" \
+                               "API_KEY=secretref:api-key"
 
       # -----------------------------------------------------------------------
       # 7. Verify the deployment is healthy

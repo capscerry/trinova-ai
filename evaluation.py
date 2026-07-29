@@ -1,4 +1,4 @@
-from database import load_forecast_dataset
+from client.inventory_client import load_forecast_dataset
 from models.linear_regression import ForecastModel
 
 from sklearn.metrics import (
