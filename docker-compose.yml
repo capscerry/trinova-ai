@@ -2,11 +2,11 @@
 # Trinova AI — Local Development Docker Compose
 # =============================================================================
 # Usage:
-#   1. Copy .env.example to .env and fill in your real values
+#   1. Copy .env.example to .env and fill in your real values (if any)
 #   2. docker compose up --build
 #
-# Environment variables are injected at runtime via env_file — they are
-# NEVER baked into the image.  The .env file is gitignored and dockerignored.
+# The Inventory AI accepts forecast data via POST /forecast.
+# It does not connect to the ASP.NET backend — the backend calls this service.
 # =============================================================================
 
 services:
@@ -16,22 +16,7 @@ services:
       dockerfile: Dockerfile
     image: trinova-ai:local
 
-    # ------------------------------------------------------------------
-    # Runtime environment injection
-    # ------------------------------------------------------------------
-    env_file:
-      - .env                          # must exist locally (copied from .env.example)
-
     environment:
-      # Backend API — required
-      - INVENTORY_API_BASE_URL=${INVENTORY_API_BASE_URL:-}
-      # Auth — optional
-      - API_KEY=${API_KEY:-}
-      # HTTP client tuning — optional
-      - REQUEST_TIMEOUT=${REQUEST_TIMEOUT:-30}
-      - MAX_RETRIES=${MAX_RETRIES:-3}
-      - RETRY_BACKOFF=${RETRY_BACKOFF:-1.0}
-      # App config
       - PORT=8080
 
     ports:
