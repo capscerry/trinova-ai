@@ -53,7 +53,7 @@ def _startup_check() -> None:
             " OR all four discrete variables:\n"
             "   DB_SERVER   = <azure-sql-hostname>\n"
             "   DB_NAME     = <database>\n"
-            "   DB_UID      = <user@admin@server-name>   ← full form required\n"
+            "   DB_UID      = <user@admin>   ← short form, no @server-name suffix\n"
             "   DB_PWD      = <password>\n"
             "\n"
             " Injection checklist:\n"
@@ -82,9 +82,9 @@ def _parse_ado_string(raw: str) -> dict:
     Splits on the FIRST '=' per segment so values that contain '=' are safe.
 
     Example:
-        "Server=host;Database=db;User Id=user@srv;Password=p@ss;"
+        "Server=host;Database=db;User Id=user@admin;Password=p@ss;"
     Returns:
-        {"server": "host", "database": "db", "user id": "user@srv",
+        {"server": "host", "database": "db", "user id": "user@admin",
          "password": "p@ss"}
     """
     parts = {}
@@ -104,7 +104,7 @@ def _build_pyodbc_string(server: str, database: str, uid: str, pwd: str) -> str:
     Enforced requirements:
     - DRIVER={ODBC Driver 18 for SQL Server}
     - SERVER uses  tcp:<host>,1433  (Azure SQL requires tcp: + explicit port)
-    - UID is the full Azure SQL username  e.g.  user@admin@server-name
+    - UID is the Azure SQL username  e.g.  user@admin  (no @server-name suffix)
     - TrustServerCertificate=yes  (pyodbc needs yes/no, NOT True/False)
     - Encrypt=yes  (required by ODBC Driver 18 by default; explicit for clarity)
     """
