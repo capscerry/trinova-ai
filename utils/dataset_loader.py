@@ -1,12 +1,11 @@
 """
-inventory_client.py
---------------------
+dataset_loader.py
+-----------------
 Converts the forecast dataset payload (sent by the ASP.NET backend via
 POST /forecast) into a pandas DataFrame that the rest of the pipeline
 can consume unchanged.
 
-The Inventory AI no longer fetches data from any external service.
-Data flows in the opposite direction:
+Data flows in one direction only:
 
     ASP.NET Backend  →  POST /forecast  →  Inventory AI
                               ↓

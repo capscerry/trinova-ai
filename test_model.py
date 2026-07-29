@@ -7,7 +7,7 @@ Provide a sample dataset inline (or load from a local JSON file) so the
 test is self-contained and does not depend on any external service.
 """
 
-from client.inventory_client import load_forecast_dataset
+from utils.dataset_loader import load_forecast_dataset
 from models.linear_regression import ForecastModel
 
 # ---------------------------------------------------------------------------

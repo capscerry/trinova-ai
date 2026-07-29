@@ -9,8 +9,6 @@
 #   AZURE_REGISTRY_LOGIN_SERVER    — e.g. trinovaregistry.azurecr.io
 #   AZURE_REGISTRY_USERNAME        — ACR admin username (or service principal)
 #   AZURE_REGISTRY_PASSWORD        — ACR admin password (or SP secret)
-#   INVENTORY_API_BASE_URL         — e.g. https://trinova-backend.azurewebsites.net/api
-#   API_KEY                        — bearer token for the backend (if required)
 #
 # Required GitHub repository variables (Settings → Variables → Actions):
 #
@@ -63,7 +61,6 @@ jobs:
 
       # -----------------------------------------------------------------------
       # 4. Build and push the Docker image
-      #    Secrets are NOT baked into the image — injected at runtime (step 6).
       # -----------------------------------------------------------------------
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -75,22 +72,7 @@ jobs:
             ${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
 
       # -----------------------------------------------------------------------
-      # 5. Store backend credentials as Container App secrets
-      #    Values are held in Azure's secret store — never in plain-text logs.
-      # -----------------------------------------------------------------------
-      - name: Set backend secrets on Container App
-        uses: azure/cli@v2
-        with:
-          azcliversion: latest
-          inlineScript: |
-            az containerapp secret set \
-              --name           "${{ vars.AZURE_CONTAINER_APP_NAME }}" \
-              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-              --secrets        "inventory-api-base-url=${{ secrets.INVENTORY_API_BASE_URL }}" \
-                               "api-key=${{ secrets.API_KEY }}"
-
-      # -----------------------------------------------------------------------
-      # 6. Deploy new image revision and inject env vars from secrets
+      # 5. Deploy new image revision
       # -----------------------------------------------------------------------
       - name: Deploy to Azure Container App
         uses: azure/cli@v2
@@ -100,12 +82,10 @@ jobs:
             az containerapp update \
               --name           "${{ vars.AZURE_CONTAINER_APP_NAME }}" \
               --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-              --image          "${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" \
-              --set-env-vars   "INVENTORY_API_BASE_URL=secretref:inventory-api-base-url" \
-                               "API_KEY=secretref:api-key"
+              --image          "${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
 
       # -----------------------------------------------------------------------
-      # 7. Verify the deployment is healthy
+      # 6. Verify the deployment is healthy
       # -----------------------------------------------------------------------
       - name: Verify Container App revision is running
         uses: azure/cli@v2

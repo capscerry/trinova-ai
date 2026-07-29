@@ -26,7 +26,7 @@ import argparse
 import json
 import sys
 
-from client.inventory_client import load_forecast_dataset
+from utils.dataset_loader import load_forecast_dataset
 from models.linear_regression import ForecastModel
 
 from sklearn.metrics import (
