@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 
 class ForecastResponse(BaseModel):
@@ -7,4 +8,4 @@ class ForecastResponse(BaseModel):
     last_training_period: str
     historical_records: int
     forecast_next_month: float
-    generated_at: str
+    generated_at: datetime
