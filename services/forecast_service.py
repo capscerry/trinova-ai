@@ -59,6 +59,13 @@ class ForecastService:
 
             historical_records = len(product_data)
 
+            if historical_records < 3:
+                print(
+                    f"Skipping {product_name} "
+                    f"(only {historical_records} historical records)"
+                )
+                continue
+
             # Tambahkan period index
             product_data["period_index"] = range(
                 1,
