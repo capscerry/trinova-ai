@@ -25,9 +25,9 @@ Example
 import argparse
 import json
 import sys
+from typing import Any
 
-from utils.dataset_loader import load_forecast_dataset
-from models.linear_regression import ForecastModel
+import numpy as np
 
 from sklearn.metrics import (
     mean_absolute_error,
@@ -35,10 +35,13 @@ from sklearn.metrics import (
     r2_score,
 )
 
-import numpy as np
+from models.linear_regression import ForecastModel
+from utils.dataset_loader import load_forecast_dataset
 
 
-def evaluate_model(items: list[dict]) -> tuple:
+def evaluate_model(
+    items: list[dict[str, Any]]
+) -> tuple[int, int, list[dict[str, Any]], float, float, float]:
     df = load_forecast_dataset(items)
 
     actual_values = []
@@ -53,16 +56,15 @@ def evaluate_model(items: list[dict]) -> tuple:
 
         product_data = product_data.sort_values(["tahun", "bulan"])
 
-        # Need at least 2 records for a train / test split
         if len(product_data) < 2:
             continue
 
         train_data = product_data.iloc[:-1]
-        test_data  = product_data.iloc[-1]
+        test_data = product_data.iloc[-1]
 
         prediction = model.train(train_data)
-        actual     = float(test_data["total_usage"])
-        error      = abs(actual - prediction)
+        actual = float(test_data["total_usage"])
+        error = abs(actual - prediction)
 
         actual_values.append(actual)
         predicted_values.append(prediction)
@@ -90,6 +92,11 @@ def evaluate_model(items: list[dict]) -> tuple:
             "absolute_error":   error,
         })
 
+    if not actual_values:
+        raise ValueError(
+            "No products contain enough historical data for evaluation."
+        )
+
     mae  = mean_absolute_error(actual_values, predicted_values)
     rmse = np.sqrt(mean_squared_error(actual_values, predicted_values))
     r2   = r2_score(actual_values, predicted_values)
@@ -106,7 +113,9 @@ def evaluate_model(items: list[dict]) -> tuple:
     )
 
 
-def print_summary(items: list[dict]) -> None:
+def print_summary(
+    items: list[dict[str, Any]]
+) -> None:
 
     (
         total_products,

@@ -1,13 +1,10 @@
-from utils.dataset_loader import load_forecast_dataset
-from models.linear_regression import ForecastModel
-from repositories.forecast_history_repository import ForecastHistoryRepository
-
-import pandas as pd
-import math
-from typing import Any
-from utils.date_helper import next_period
-
 import logging
+import math
+from datetime import datetime
+
+from models.linear_regression import ForecastModel
+from utils.dataset_loader import load_forecast_dataset
+from utils.date_helper import next_period
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,25 +13,20 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-from datetime import datetime
-from utils.date_helper import next_period
-from repositories.forecast_history_repository import ForecastHistoryRepository
-from models.forecast_history import ForecastHistory
-
-#Set the Minimum Historical Records and Last Month Training Dataset
-REALTIME_MIN_HISTORY = 3
+# Forecast configuration
+# - Minimum history required for monthly forecast
 MONTHLY_MIN_HISTORY = 6
+# - Number of recent months used for model training
 ROLLING_WINDOW = 6
 
 class ForecastService:
 
     def __init__(self):
         self.model = ForecastModel()
-        self.repository = ForecastHistoryRepository()
 
-    def generate_forecast_core(self):
+    def generate_forecast_core(self, items):
 
-        dataset = load_forecast_dataset()
+        dataset = load_forecast_dataset(items)
         logger.info(f"Dataset loaded: {len(dataset)} records")
 
         results = []
@@ -73,6 +65,15 @@ class ForecastService:
                 len(product_data) + 1
             )
 
+            if len(product_data) < 2:
+                logger.warning(
+                    "Skipping product %s (%s) because it only has %d historical record(s).",
+                    product_id,
+                    product_name,
+                    len(product_data)
+                )
+                continue
+
             forecast = self.model.train(product_data)
 
             forecast_quantity = max(1, math.ceil(forecast))
@@ -95,68 +96,29 @@ class ForecastService:
 
         return results
 
-    def generate_realtime_forecast(self):
+    def generate_realtime_forecast(self, items):
 
         logger.info("Realtime Forecast Started")
 
-        forecasts = self.generate_forecast_core()
-
+        forecasts = self.generate_forecast_core(items)
 
         logger.info(f"Generated {len(forecasts)} forecast(s)")
         logger.info("Realtime Forecast Completed")
 
         return forecasts
 
-    def generate_monthly_forecast(self):
+    def generate_monthly_forecast(self, items):
 
         logger.info("Monthly Forecast Started")
 
-        forecasts = self.generate_forecast_core()
+        forecasts = self.generate_forecast_core(items)
+
         valid_forecasts = [
             item
             for item in forecasts
             if item["historical_records"] >= MONTHLY_MIN_HISTORY
         ]
 
-        # Hapus forecast bulan yang sama terlebih dahulu
-        if valid_forecasts:
-            self.repository.delete_by_forecast_month(
-                valid_forecasts[0]["forecast_month"]
-            )
+        logger.info(f"Generated {len(valid_forecasts)} monthly forecast(s)")
 
-        saved_count = 0
-
-        forecast_models = []
-
-        for item in valid_forecasts:
-            
-            forecast_models.append(
-                ForecastHistory(
-                    product_id=item["product_id"],
-                    forecast_month=item["forecast_month"],
-                    forecast_quantity=item["forecast_quantity"],
-                    generated_at=datetime.now(),
-                    historical_records=item["historical_records"],
-                    last_training_period=item["last_training_period"],
-                    model_name="Linear Regression",
-                    created_by="SYSTEM"
-                )
-            )
-
-        self.repository.save_all(forecast_models)
-
-        saved_count += 1
-
-        logger.info(f"{saved_count} Forecast(s) Saved")
-
-        return forecasts
-
-    def get_latest_monthly_forecast(self):
-
-        logger.info("Loading Latest Monthly Forecast")
-
-        forecasts = self.repository.get_latest()
-
-        logger.info(f"{len(forecasts)} Forecast(s) Loaded")
-
-        return forecasts
+        return valid_forecasts

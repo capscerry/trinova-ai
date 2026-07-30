@@ -1,11 +1,13 @@
-from fastapi import FastAPI, HTTPException
+import logging
 from typing import List
-import traceback
+
+from fastapi import FastAPI, HTTPException
 
 from schemas.forecast_request import ForecastRequest
 from schemas.forecast_response import ForecastResponse
 from services.forecast_service import ForecastService
 
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Trinova AI Forecast API",
@@ -19,30 +21,23 @@ service = ForecastService()
 def root():
     return {"message": "Trinova AI Forecast API Running"}
 
-@app.get("/forecast", response_model=List[ForecastResponse])
-def get_forecast():
+
+@app.post("/forecast", response_model=List[ForecastResponse])
+def forecast(request: ForecastRequest):
     try:
-        return service.generate_realtime_forecast()
+        return service.generate_realtime_forecast(request.items)
     except Exception as e:
-        traceback.print_exc()
+        logger.exception("Failed to generate realtime forecast")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/forecast/monthly/generate")
-def generate_monthly_forecast():
-    try:
-        return service.generate_monthly_forecast()
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get(
-    "/forecast/monthly/latest",
+@app.post(
+    "/forecast/monthly/generate",
     response_model=List[ForecastResponse]
 )
-def get_latest_monthly_forecast():
+def generate_monthly_forecast(request: ForecastRequest):
     try:
-        return service.get_latest_monthly_forecast()
+        return service.generate_monthly_forecast(request.items)
     except Exception as e:
-        traceback.print_exc()
+        logger.exception("Failed to generate monthly forecast")
         raise HTTPException(status_code=500, detail=str(e))

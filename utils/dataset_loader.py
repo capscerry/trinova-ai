@@ -52,7 +52,17 @@ def load_forecast_dataset(items: list[dict[str, Any]]) -> pd.DataFrame:
     if not items:
         raise ValueError("Forecast dataset is empty — no items were provided.")
 
-    df = pd.DataFrame(items)
+    normalized = []
+
+    for item in items:
+        if hasattr(item, "model_dump"):          # Pydantic v2
+            normalized.append(item.model_dump())
+        elif hasattr(item, "dict"):              # Pydantic v1
+            normalized.append(item.dict())
+        else:
+            normalized.append(item)
+
+    df = pd.DataFrame(normalized)
 
     required_columns = {"product_id", "product_name", "tahun", "bulan", "total_usage"}
     missing = required_columns - set(df.columns)
