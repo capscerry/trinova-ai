@@ -6,7 +6,7 @@ class ForecastModel:
 
     def train(self, df):
 
-        X = df["bulan"].values.reshape(-1, 1)
+        X = df["period_index"].values.reshape(-1, 1)
         y = df["total_usage"].values
 
         model = LinearRegression()

@@ -54,6 +54,27 @@ class ForecastService:
 
             historical_records = len(product_data)
 
+            # Urutkan data berdasarkan waktu
+            product_data = (
+                product_data
+                .sort_values(["tahun", "bulan"])
+                .reset_index(drop=True)
+            )
+
+            # Tambahkan period index
+            product_data["period_index"] = range(
+                1,
+                len(product_data) + 1
+            )
+
+            # DEBUG
+            print(product_data[[
+                "tahun",
+                "bulan",
+                "period_index",
+                "total_usage"
+            ]])
+
             forecast = self.model.train(product_data)
 
             forecast_quantity = max(1, math.ceil(forecast))
