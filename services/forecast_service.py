@@ -7,6 +7,10 @@ from typing import Any
 from utils.date_helper import next_period
 
 
+#Set the Minimum Historical Records and Last Month Training Dataset
+MIN_HISTORICAL_RECORDS = 3
+ROLLING_WINDOW = 6
+
 class ForecastService:
 
     def __init__(self):
@@ -53,13 +57,13 @@ class ForecastService:
             product_data = (
                 product_data
                 .sort_values(["tahun", "bulan"])
-                .tail(6)
+                .tail(ROLLING_WINDOW)
                 .reset_index(drop=True)
             )
 
             historical_records = len(product_data)
 
-            if historical_records < 3:
+            if historical_records < MIN_HISTORICAL_RECORDS:
                 print(
                     f"Skipping {product_name} "
                     f"(only {historical_records} historical records)"
