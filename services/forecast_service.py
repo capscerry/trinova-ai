@@ -40,33 +40,31 @@ class ForecastService:
 
             product_name = product_data.iloc[0]["product_name"]
 
-            last_year = product_data["tahun"].max()
+            last_row = product_data.iloc[-1]
 
-            last_month = (
-                product_data[
-                    product_data["tahun"] == last_year
-                ]["bulan"].max()
-            )
+            last_year = last_row["tahun"]
+            last_month = last_row["bulan"]
 
             last_training_period = f"{last_year}-{last_month:02d}"
 
             forecast_month = next_period(last_year, last_month)
 
-            historical_records = len(product_data)
-
             # Urutkan data berdasarkan waktu
             product_data = (
                 product_data
                 .sort_values(["tahun", "bulan"])
+                .tail(6)
                 .reset_index(drop=True)
             )
+
+            historical_records = len(product_data)
 
             # Tambahkan period index
             product_data["period_index"] = range(
                 1,
                 len(product_data) + 1
             )
-            
+
             forecast = self.model.train(product_data)
 
             forecast_quantity = max(1, math.ceil(forecast))
