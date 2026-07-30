@@ -66,15 +66,7 @@ class ForecastService:
                 1,
                 len(product_data) + 1
             )
-
-            # DEBUG
-            print(product_data[[
-                "tahun",
-                "bulan",
-                "period_index",
-                "total_usage"
-            ]])
-
+            
             forecast = self.model.train(product_data)
 
             forecast_quantity = max(1, math.ceil(forecast))

@@ -12,7 +12,9 @@ class ForecastModel:
         model = LinearRegression()
         model.fit(X, y)
 
-        prediction = model.predict([[7]])
+        next_period = df["period_index"].max() + 1
+
+        prediction = model.predict([[next_period]])
 
         return round(float(prediction[0]), 2)
     
